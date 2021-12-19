@@ -1,92 +1,60 @@
 package server
 
 import (
-	"context"
+	"bufio"
 	"crypto/sha256"
-	"io"
 	"log"
-	"net/http"
+	"net"
 	"os"
 )
 
 func StartServer(bufferSize int, password string) error {
 	log.Println("Starting Server")
-	server := http.Server{Addr: ":8899"}
-	idleConnsClosed := make(chan bool)
 
-	http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
-		log.Printf("Request recieved from %s\n", r.RemoteAddr)
+	serv, tcpErr := net.Listen("tcp", ":8899")
 
-		// Send header
-		rw.Header().Set("Special-Header", "XXSSXX")
-		if value := r.Header.Get("Password-Header"); value == "" {
-			log.Println("Header not set")
-			return
-		} else if value == password {
-			log.Println("Password Match")
-		} else {
-			log.Println("Password Dosen't Match")
-			return
-		}
-
-		log.Printf("Sending Stream\n")
-		hash := sha256.New()
-		buffer := make([]byte, bufferSize)
-		var total int64
-
-		for {
-			nRead, ioErr := io.ReadFull(os.Stdin, buffer)
-
-			if ioErr == io.EOF {
-				log.Println("EOF reached")
-				break
-			}
-
-			if ioErr != io.ErrUnexpectedEOF && ioErr != nil {
-				log.Println(ioErr)
-				break
-			}
-
-			if nRead == bufferSize {
-				rw.Write(buffer)
-				hash.Write(buffer)
-			} else {
-				rw.Write(buffer[:nRead])
-				hash.Write(buffer[:nRead])
-			}
-
-			total += int64(nRead)
-
-			if ioErr == io.ErrUnexpectedEOF {
-				log.Println("U EOF reached")
-				break
-			}
-
-		}
-
-		log.Printf("Total sent %dbytes  \n", total)
-		log.Printf("Sum of the Hash - %x\n", hash.Sum(nil))
-		idleConnsClosed <- true
-	})
-
-	waitToClose := make(chan bool)
-	go func() {
-		<-idleConnsClosed
-		server.Shutdown(context.TODO())
-		waitToClose <- true
-	}()
-
-	sErr := server.ListenAndServe()
-
-	if sErr == http.ErrServerClosed {
-		sErr = nil
+	if tcpErr != nil {
+		return tcpErr
 	}
 
-	<-waitToClose
+	defer serv.Close()
 
-	if sErr != nil {
-		return sErr
+	conn, connErr := serv.Accept()
+
+	if connErr != nil {
+		return connErr
 	}
+
+	connWriter := bufio.NewWriter(conn)
+	defer connWriter.Flush()
+
+	hash := sha256.New()
+	buffer := make([]byte, bufferSize)
+	var total int64
+
+	for {
+		nRead, rErr := os.Stdin.Read(buffer)
+
+		if rErr != nil {
+			log.Println(rErr)
+			break
+		}
+
+		total += int64(nRead)
+
+		if _, err := connWriter.Write(buffer[:nRead]); err != nil {
+			log.Println(err)
+			break
+		}
+
+		if _, err := hash.Write(buffer[:nRead]); err != nil {
+			log.Println(err)
+			break
+		}
+	}
+
+	log.Printf("Total sent %dbytes  \n", total)
+	log.Printf("Sum of the Hash - %x\n", hash.Sum(nil))
 
 	return nil
 }
