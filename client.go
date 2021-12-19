@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func StartClient(address *string, bufferSize int) error {
+func StartClient(address *string, bufferSize int, password string) error {
 	log.Printf("Starting client on %s...", *address)
 	// tr := http.Transport{
 	// 	IdleConnTimeout:       time.Hour * 999999,
@@ -31,7 +31,7 @@ func StartClient(address *string, bufferSize int) error {
 			return rErr
 		}
 
-		req.Header.Set("Password-Header", "pass")
+		req.Header.Set("Password-Header", password)
 		resp, resErr = client.Do(req)
 
 		if resErr != nil {

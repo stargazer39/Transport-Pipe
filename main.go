@@ -1,12 +1,12 @@
 package main
 
 import (
+	"crypto/sha256"
 	"flag"
 	"log"
 	"os"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
 func main() {
@@ -16,48 +16,42 @@ func main() {
 	mode := flag.String("mode", "client", "Set the type (client/server)")
 	address := flag.String("address", "127.0.0.1", "Enter an IP address / URL")
 	bufSize := flag.String("b", "1M", "Enter a buffer size")
+	password := flag.String("password", "pass", "Server / Client password")
 	flag.Parse()
 
-	bufferSize := 1024 * 1024
-
+	_password := *password
 	// Sanitize buffer size
 	re := regexp.MustCompile("[0-9]+")
-	log.Println(*bufSize)
-	if strings.HasSuffix(*bufSize, "M") {
-		value, valErr := strconv.Atoi(re.FindAllString(*bufSize, -1)[0])
+	units := []string{"K", "M", "G"}
 
-		if valErr != nil {
-			log.Panicln("Wrong -b")
-		}
+	unit := (*bufSize)[len(*bufSize)-1:]
+	value, valErr := strconv.Atoi(re.FindAllString(*bufSize, -1)[0])
 
-		bufferSize = value * 1024 * 1024
-	} else if strings.HasSuffix(*bufSize, "K") {
-		value, valErr := strconv.Atoi(re.FindAllString(*bufSize, -1)[0])
-
-		if valErr != nil {
-			log.Panicln("Wrong -b")
-		}
-
-		bufferSize = value * 1024
-	} else {
-		value, valErr := strconv.Atoi(re.FindAllString(*bufSize, -1)[0])
-
-		if valErr != nil {
-			log.Panicln("Wrong -b")
-		}
-
-		bufferSize = value
+	if valErr != nil {
+		log.Panicln("Wrong -b")
 	}
+
+	bufferSize := value
+
+	if !re.Match([]byte(unit)) {
+		for _, v := range units {
+			bufferSize *= 1024
+			if v == unit {
+				break
+			}
+		}
+	}
+
 	log.Printf("Buffer size %d", bufferSize)
 
 	switch *mode {
 	case "client":
-		if cErr := StartClient(address, bufferSize); cErr != nil {
-			log.Panicln(cErr)
+		if cErr := StartClient(address, bufferSize, _password); cErr != nil {
+			log.Panicln(cErr.Error())
 		}
 		log.Println("Successfully Read")
 	case "server":
-		if sErr := StartServer(bufferSize); sErr != nil {
+		if sErr := StartServer(bufferSize, _password); sErr != nil {
 			log.Panicln(sErr.Error())
 		}
 
@@ -65,4 +59,10 @@ func main() {
 		log.Println("Wrong type (client/server)")
 	}
 
+}
+
+func String2Hash(str string) string {
+	h := sha256.New()
+	h.Write([]byte(str))
+	return string(h.Sum(nil))
 }

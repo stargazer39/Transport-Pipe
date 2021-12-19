@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-func StartServer(bufferSize int) error {
+func StartServer(bufferSize int, password string) error {
 	log.Println("Starting Server")
 	server := http.Server{Addr: ":8899"}
 	idleConnsClosed := make(chan bool)
@@ -22,7 +22,7 @@ func StartServer(bufferSize int) error {
 		if value := r.Header.Get("Password-Header"); value == "" {
 			log.Println("Header not set")
 			return
-		} else if value == "pass" {
+		} else if value == password {
 			log.Println("Password Match")
 		} else {
 			log.Println("Password Dosen't Match")
