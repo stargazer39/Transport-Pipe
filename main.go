@@ -6,12 +6,14 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"stargazer/transport-pipe/client"
+	"stargazer/transport-pipe/color"
+	"stargazer/transport-pipe/server"
 	"strconv"
 )
 
 func main() {
-
-	log.SetOutput(NewColorWriter(os.Stderr))
+	log.SetOutput(color.NewWriter(os.Stderr))
 
 	mode := flag.String("mode", "client", "Set the type (client/server)")
 	address := flag.String("address", "127.0.0.1", "Enter an IP address / URL")
@@ -46,12 +48,12 @@ func main() {
 
 	switch *mode {
 	case "client":
-		if cErr := StartClient(address, bufferSize, _password); cErr != nil {
+		if cErr := client.StartClient(address, bufferSize, _password); cErr != nil {
 			log.Panicln(cErr.Error())
 		}
 		log.Println("Successfully Read")
 	case "server":
-		if sErr := StartServer(bufferSize, _password); sErr != nil {
+		if sErr := server.StartServer(bufferSize, _password); sErr != nil {
 			log.Panicln(sErr.Error())
 		}
 
