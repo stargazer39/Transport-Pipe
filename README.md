@@ -1,4 +1,4 @@
-# transport-pipe
+# Transport-Pipe
 
 A way to transport a unix pipe over TCP
 
