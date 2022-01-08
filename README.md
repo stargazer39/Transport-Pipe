@@ -1,6 +1,6 @@
 # transport-pipe
 
-A way to transport a unix pipe over http
+A way to transport a unix pipe over TCP
 
 ### Serve a pipe (By default at 0.0.0.0:8899)
 ```
@@ -9,7 +9,7 @@ go run . -mode server -b 1M < '/home/stargazer/Videos/[1080P Full風] Hand in Ha
 
 ### Consume it
 ```
-go run . -address http://127.0.0.1:8899/ -b 1M | ffplay -
+go run . -address 127.0.0.1:8899 -b 1M | ffplay -
 ```
 
 Very alpha. Under devlopment.
